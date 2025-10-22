@@ -100,3 +100,4 @@ Get the yaml
 k get pod httpd-sergio -o yaml
 ```
 
+:set paste -> for preserving original format in Vim
