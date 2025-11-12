@@ -531,4 +531,55 @@ For production cluster, not use default namespace.
 
 Every app should have its own namespace.
 
+```
+ ~  k create namespace mealie
+namespace/mealie created
+ ~  k get namespaces
+NAME              STATUS   AGE
+default           Active   27d
+kube-node-lease   Active   27d
+kube-public       Active   27d
+kube-system       Active   27d
+mealie            Active   8s
+
+~  k create namespace mealie -o yaml --dry-run=client
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mealie
+spec: {}
+status: {}
+```
+
+```
+ k create namespace mealie --dry-run=client -o yaml > namespace.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mealie
+spec: {}
+status: {}
+```
+
+- Delete a namespace
+it will delete anything associated to the namespace.
+```
+ k delete namespaces mealie
+namespace "mealie" deleted
+```
+
+- Create a namespace with the yaml file
+```
+ k apply -f namespace.yaml
+namespace/mealie created
+ ~/development/workspaces/lab/kubernetes/mealie   main ±  k get ns
+NAME              STATUS   AGE
+default           Active   27d
+kube-node-lease   Active   27d
+kube-public       Active   27d
+kube-system       Active   27d
+mealie            Active   5s
+```
+
 
