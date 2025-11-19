@@ -158,7 +158,7 @@ test   3/3     3            3           105s
 Easy to check the properties:
 
 ```
- ~  k describe deployments.apps test
+ $ k describe deployments.apps test
 Name:                   test
 Namespace:              default
 CreationTimestamp:      Mon, 03 Nov 2025 20:58:34 +0100
@@ -201,12 +201,12 @@ Events:
 2. run a comand for creating a pod and generate YAML file without running it on the cluster
 
 ```
- ~  kgp
+ $ kgp
 NAME           READY   STATUS    RESTARTS        AGE
 httpd          1/1     Running   3 (5m34s ago)   5d20h
 nginx-sergio   1/1     Running   6 (5m34s ago)   13d
 nginx-yaml     1/1     Running   5 (5m34s ago)   12d
- ~  k run sergio --image=nginx --dry-run=client -o yaml
+ $ k run sergio --image=nginx --dry-run=client -o yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -221,7 +221,7 @@ spec:
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 status: {}
- ~  kgp
+ $ kgp
 NAME           READY   STATUS    RESTARTS      AGE
 httpd          1/1     Running   3 (11m ago)   5d20h
 nginx-sergio   1/1     Running   6 (11m ago)   13d
@@ -263,9 +263,9 @@ status: {}
 
 deployment is to define the desired state.
 ```
- k apply -f deploy.yaml
+$ k apply -f deploy.yaml
 deployment.apps/test created
- kgp
+$ kgp
 NAME                    READY   STATUS    RESTARTS      AGE
 httpd                   1/1     Running   3 (21m ago)   5d21h
 nginx-sergio            1/1     Running   6 (21m ago)   13d
@@ -285,7 +285,7 @@ The deployment is not actually creating the pods.
 The deployment controls the replica set, and a replica set is basically a set of replicas of a certain pod. 
 
 ```
- k describe deployments.apps test
+$ k describe deployments.apps test
 Name:                   test
 Namespace:              default
 CreationTimestamp:      Tue, 04 Nov 2025 17:41:01 +0100
@@ -319,14 +319,14 @@ Events:
   Type    Reason             Age   From                   Message
   ----    ------             ----  ----                   -------
   Normal  ScalingReplicaSet  2m4s  deployment-controller  Scaled up replica set test-6546ccdcf9 from 0 to 10
- ~/development/workspaces/lab/kubernetes/deployments   main ±  k get replicasets.apps
+ ~/development/workspaces/lab/kubernetes/deployments $  main ± $ k get replicasets.apps
 NAME              DESIRED   CURRENT   READY   AGE
 test-6546ccdcf9   10        10        10      2m25s
 ```
 
 
 ```
- k describe replicasets.apps test-6546ccdcf9
+$ k describe replicasets.apps test-6546ccdcf9
 Name:           test-6546ccdcf9
 Namespace:      default
 Selector:       app=test,pod-template-hash=6546ccdcf9
@@ -532,9 +532,9 @@ For production cluster, not use default namespace.
 Every app should have its own namespace.
 
 ```
- ~  k create namespace mealie
+$ k create namespace mealie
 namespace/mealie created
- ~  k get namespaces
+$ k get namespaces
 NAME              STATUS   AGE
 default           Active   27d
 kube-node-lease   Active   27d
@@ -542,7 +542,7 @@ kube-public       Active   27d
 kube-system       Active   27d
 mealie            Active   8s
 
-~  k create namespace mealie -o yaml --dry-run=client
+$ k create namespace mealie -o yaml --dry-run=client
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -552,7 +552,7 @@ status: {}
 ```
 
 ```
- k create namespace mealie --dry-run=client -o yaml > namespace.yaml
+$ k create namespace mealie --dry-run=client -o yaml > namespace.yaml
 
 apiVersion: v1
 kind: Namespace
@@ -565,15 +565,15 @@ status: {}
 - Delete a namespace
 it will delete anything associated to the namespace.
 ```
- k delete namespaces mealie
+$ k delete namespaces mealie
 namespace "mealie" deleted
 ```
 
 - Create a namespace with the yaml file
 ```
- k apply -f namespace.yaml
+$ k apply -f namespace.yaml
 namespace/mealie created
- ~/development/workspaces/lab/kubernetes/mealie   main ±  k get ns
+$ k get ns
 NAME              STATUS   AGE
 default           Active   27d
 kube-node-lease   Active   27d
@@ -582,4 +582,110 @@ kube-system       Active   27d
 mealie            Active   5s
 ```
 
+- Creating a pod within a namespace
 
+```
+$ k run mischa --image=nginx
+pod/mischa created
+$ kgp
+NAME     READY   STATUS         RESTARTS   AGE
+mischa   1/1     Running   0          3s
+$ kubectl get pods -n mealie
+No resources found in mealie namespace.
+$ kubectl get pods -n default
+NAME     READY   STATUS         RESTARTS   AGE
+mischa   1/1     Running   0          45s
+$ k run mischa-mealie --image=nginx --namespace mealie
+pod/mischa-mealie created
+$ kgp
+NAME     READY   STATUS         RESTARTS   AGE
+mischa   0/1     ErrImagePull   0          108s
+$ k get pods -n mealie
+NAME            READY   STATUS    RESTARTS   AGE
+mischa-mealie   1/1     Running   0          38s
+```
+
+- set namespace as default
+
+```
+$ k config current-context
+rancher-desktop
+$ k config set-context --current --namespace=mealie
+Context "rancher-desktop" modified.
+$ kgp
+NAME            READY   STATUS    RESTARTS   AGE
+mischa-mealie   1/1     Running   0          5m25s
+$ kgp -n default
+NAME     READY   STATUS    RESTARTS   AGE
+mischa   1/1     Running   0          2m10s
+$ kgp
+NAME            READY   STATUS    RESTARTS   AGE
+mischa-mealie   1/1     Running   0          5m45s
+```
+
+### First app
+
+create yaml file
+```
+k create deployment mealie --image=nginx --dry-run=client -o yaml > deployment.yaml
+```
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mealie
+  name: mealie
+  namespace: mealie
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mealie
+  template:
+    metadata:
+      labels:
+        app: mealie
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+```
+
+ghcr.io/mealie-recipes/mealie:<version>
+
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mealie
+  name: mealie
+  namespace: mealie
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mealie
+  template:
+    metadata:
+      labels:
+        app: mealie
+    spec:
+      containers:
+      - image: ghcr.io/mealie-recipes/mealie:v1.2.0
+        name: mealie
+```
+
+Apply
+  
+```
+k apply -f deployment.yaml
+deployment.apps/mealie created
+```
+  
+```
+$ k describe pod mealie
+```
