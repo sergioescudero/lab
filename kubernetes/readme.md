@@ -689,3 +689,465 @@ deployment.apps/mealie created
 ```
 $ k describe pod mealie
 ```
+
+Port forwarding
+```
+$ k port-forward pods/mealie-5479dbb894-mk7jw 9000
+Forwarding from 127.0.0.1:9000 -> 9000
+Forwarding from [::1]:9000 -> 9000
+```
+  
+List deployments
+
+```
+$ k get deployments.apps
+NAME     READY   UP-TO-DATE   AVAILABLE   AGE
+mealie   1/1     1            1           27m
+```
+
+Update the version
+  
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mealie
+  name: mealie
+  namespace: mealie
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mealie
+  template:
+    metadata:
+      labels:
+        app: mealie
+    spec:
+      containers:
+      - image: ghcr.io/mealie-recipes/mealie:v3.5.0
+        name: mealie
+        ports:
+          - containerPort: 9000
+
+And apply again
+
+k apply -f deployment.yaml
+```
+  
+For deleting all pod instances created with a deployment:
+  
+```
+kubectl delete deployment name
+```
+
+## Networking
+### Intro
+  
+List all pods in all namespaces
+
+kgp -A
+k get pods --all-namespaces -o wide
+
+Each pod gets its own IP address.
+By default, pods can connect to all pods on all nodes.
+Containers in pods can comminicate with each other through localhost.
+
+  
+CNI plugin provides network connectivity to containers.
+  
+  
+Implemented by CNI plugins:
+  - Cilium
+  - Calico
+  - Flannel
+
+
+  
+rdctl -h -> Rancher desktop ctl
+  
+rdctl shell bash -> Rancher desktop vm.
+
+```
+$ cd /etc/cni/
+/etc/cni $ ls
+net.d
+/etc/cni $ tree
+.
+└── net.d
+    └── 10-flannel.conflist
+
+1 directories, 1 files
+/etc/cni $ cat net.d/10-flannel.conflist
+{
+  "name":"cbr0",
+  "cniVersion":"0.3.1",
+  "plugins":[
+    {
+      "type":"flannel",
+      "delegate":{
+        "hairpinMode":true,
+        "forceAddress":true,
+        "isDefaultGateway":true
+      }
+    },
+    {
+      "type":"portmap",
+      "capabilities":{
+        "portMappings":true
+      }
+    }
+  ]
+}
+```
+  
+### Services
+
+A service offers a consistent address to access a set of pods.
+  
+Pods are ephemeral.
+  
+A service is a group of pods.
+  
+Pods are constantly changing and being moved across nodes.
+  
+
+How will the system keep track of the constantly changing IP addresses? -> service
+  
+  
+-> expose generates the service.
+
+```
+$ k expose deployment frontend --port 8080
+service/frontend exposed
+$ k get service
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+frontend     ClusterIP   10.43.132.58   <none>        8080/TCP   9s
+kubernetes   ClusterIP   10.43.0.1      <none>        443/TCP    41d
+$ k get service -o wide
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE   SELECTOR
+frontend     ClusterIP   10.43.132.58   <none>        8080/TCP   27s   app=frontend
+kubernetes   ClusterIP   10.43.0.1      <none>        443/TCP    41d   <none>
+```
+
+The cluster ip is 10.43.132.58 and will remain the same.
+  
+type of services:
+  - cluster IP -> default one
+  - node port: Exposes a port on each node allowing direct access to the service throught any node's IP address.
+  
+```
+$ k get nodes -o wide
+NAME                   STATUS   ROLES                  AGE   VERSION        INTERNAL-IP    EXTERNAL-IP    OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
+lima-rancher-desktop   Ready    control-plane,master   47d   v1.33.5+k3s1   192.168.5.15   192.168.64.2   Alpine Linux v3.21   6.6.96-0-virt    docker://27.3.1
+```
+
+192.168.64.2  is the external IP.
+  
+If I have a node port service, I can exposte a port on that node directly. Then I could reach that port from by entering that IP address and the port.
+  
+Not very common.
+  
+  - Load balancer: For cloud providers.
+  
+```
+k get svc
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+frontend     ClusterIP   10.43.132.58   <none>        8080/TCP   6d
+kubernetes   ClusterIP   10.43.0.1      <none>        443/TCP    47d
+  
+  
+k edit svc frontend
+...
+  type: ClusterIP
+...
+
+  
+...
+  type: LoadBalancer
+...
+  
+  
+$ k get svc
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)          AGE
+frontend     LoadBalancer   10.43.132.58   192.168.64.2   8080:30922/TCP   6d
+kubernetes   ClusterIP      10.43.0.1      <none>         443/TCP          47d
+```  
+This is a way how to reach your your services, your applications from outside of your Kubernetes cluster.
+  
+
+#### Mealie
+doing a port forward of the pod itself.
+
+change to mealie context
+```
+$ k config set-context --current --namespace=mealie
+  
+$ kgp
+NAME                      READY   STATUS    RESTARTS       AGE
+mealie-5d545757cf-275qj   1/1     Running   7 (138m ago)   12d
+```
+
+Expose mealie deployment
+  
+```
+k expose deployment mealie --port 9000
+service/mealie exposed
+$ k get svc
+NAME     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+mealie   ClusterIP   10.43.153.184   <none>        9000/TCP   85s
+```
+
+Port forward to a service
+```
+k port-forward services/mealie 9000
+Forwarding from 127.0.0.1:9000 -> 9000
+Forwarding from [::1]:9000 -> 9000
+```
+
+The deployment is exposed through a service instead of doing the pod directly, because if we expose the pod and we kill that pod, the port for remote works.
+But if we close terminal, we will not able to access to it.
+  
+We need a load balancer.
+
+get the yaml of the service
+```
+k get svc mealie -o yaml > service.yaml
+```
+
+```
+frontend     LoadBalancer   10.43.132.58   192.168.64.2   8080:30922/TCP   6d
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2025-12-02T19:19:47Z"
+  labels:
+    app: mealie
+  name: mealie
+  namespace: mealie
+  resourceVersion: "55305"
+  uid: dd234a85-5b6f-4b40-8655-e83e1cd04468
+spec:
+  clusterIP: 10.43.153.184
+  clusterIPs:
+  - 10.43.153.184
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: mealie
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+~
+```
+
+Simplified to
+```
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2025-12-02T19:19:47Z"
+  labels:
+    app: mealie
+  name: mealie
+  namespace: mealie
+spec:
+  ports:
+  - port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: mealie
+  type: ClusterIP
+```
+type changd to LoadBalancer
+  
+Kill the existing service
+```
+$ k get svc
+NAME     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+mealie   ClusterIP   10.43.153.184   <none>        9000/TCP   12m
+$ k delete svc mealie
+service "mealie" deleted from mealie namespace
+```
+
+Apply new one:
+  
+```
+$ k apply -f service.yaml
+service/mealie created
+$ k get svc
+NAME     TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)          AGE
+mealie   LoadBalancer   10.43.174.220   192.168.64.2   9000:32530/TCP   5s
+```
+
+### Ingress
+  
+It is a resource on the cluster, and it exposes http and https routes from outside the cluster to services within the cluster.
+
+So the cluster is listening to a certain domain, and it has a root configured to root that domain to a service in the cluster.
+
+The cluster is listeing to a certain domain, and it has a route configured to route that domain to a service in the cluster.
+  
+For an app running we would need a FQDN (fully qualified domain name).
+
+Provides:
+  - SSL and TLS termination.
+  - external urls
+  - path based routing: you will the route.
+  
+Ingress controller types:
+  - nginx
+  - traefik
+  - cilium
+  - cloud: AGIC
+  
+  
+Possible:
+  domain in cloudfare pointing to IP
+  that IP address is pointing to a kubernetes load balancer created by traffic or nginx
+  the traffic is the ingres controller that running on my cluster
+  the cluster is going to look at the ingress resources configured, and it is going to look at the ingress
+  The ingress has a routing rule to ta service.
+
+  
+## Storage
+### Ephemeral Storage
+So in order for a container to save data somewhere, it needs to have a volume.
+It needs to have, in other terms a disk mounted to it.
+So a volume is just a piece of the file system where the container is hosted.
+
+  
+```
+k describe pod mealie-5d545757cf-275qj | less
+
+Volumes:
+  kube-api-access-h65zs:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+  
+```
+  
+  
+```
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+  name: nginx-storage
+spec:
+  containers:
+    - image: nginx
+      name: nginx
+      volumeMounts:
+        - mountPath: /scratch
+          name: scratch-volume
+  volumes:
+    - name: scratch-volume
+      emptyDir:       ---> it will be deleted when pod is deleted
+        sizeLimit: 500Mi
+
+  
+k apply -f nginx-pod.yaml
+pod/nginx-storage created  
+  
+  
+k describe pod nginx-pod
+...
+Volumes:
+  scratch-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:  500Mi
+  kube-api-access-m895p:
+  
+
+  
+k exec -it nginx-storage -- bash
+
+root@nginx-storage:/# ls
+bin  boot  dev	docker-entrypoint.d  docker-entrypoint.sh  etc	home  lib  media  mnt  opt  proc  root	run  sbin  scratch  srv  sys  tmp  usr	va
+  
+```
+  
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+  name: nginx-storage
+spec:
+  containers:
+    - image: nginx
+      name: nginx
+      volumeMounts:
+        - mountPath: /scratch
+          name: scratch-volume
+    - image: busybox
+      name: busybox
+      command: ["/bin/sh", "-c"]
+      args: ["sleep 1000"]
+      volumeMounts:
+        - mountPath: /scratch
+          name: scratch-volume
+  volumes:
+    - name: scratch-volume
+      emptyDir:
+        sizeLimit: 500Mi
+  
+```
+  
+**To a running pod, we cannot add a container.**
+  
+First we need to delete it:
+k delete pod nginx-storage
+pod "nginx-storage" deleted from mealie namespace
+  
+```
+k apply -f nginx-pod.yaml
+
+ kgp
+NAME                      READY   STATUS    RESTARTS       AGE
+mealie-5d545757cf-275qj   1/1     Running   16 (73m ago)   28d
+nginx-storage             2/2     Running   0              13m
+
+```
+1 volumen, 2 containers
+
+```
+ k exec -it nginx-storage -c nginx -- bash
+root@nginx-storage:/# cd /scratch/
+root@nginx-storage:/scratch# ls
+root@nginx-storage:/scratch# echo hello > hello.txt
+root@nginx-storage:/scratch# cat hello.txt
+  
+ k exec -it nginx-storage -c busybox -- sh
+/ # ls /scratch/
+hello.txt
+/ # cat /scratch/hello.txt
+hello
+  
+watch -n 1 "ls -la" -> every second run ls -la
+```
+  
+  
+### Persistent Storage
+  
+## K9s
+  
+## Helm
+  
+## Monitoring
+  
