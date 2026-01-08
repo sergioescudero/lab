@@ -1142,8 +1142,142 @@ hello
 watch -n 1 "ls -la" -> every second run ls -la
 ```
   
-  
 ### Persistent Storage
+
+persistent volume are like a huge disck that is living in the cluster where is a huge disk. Every app living in cluster is using a part of this.
+that is a persistent volumen claim.
+
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mealie-data
+  namespace: mealie
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+```
+
+as ther is not storage class name, then it takes the one by default.
+
+```
+$ k apply -f storage.yaml
+persistentvolumeclaim/mealie-data created
+$ k get persistentvolume
+No resources found
+  
+$ k get persistentvolumeclaims
+NAME          STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+mealie-data   Pending                                      local-path     <unset>                 59s
+```
+
+The following code is added in pod yaml:
+  
+```
+        volumenMounts:
+          - mountPath: /app/data
+            name: mealie-datax
+      volumes:
+        - name: mealie-datax
+          persistentVolumeClaim:
+            claimName: mealie-data
+```
+
+Then apply:
+```
+ k get pvc
+NAME          STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+mealie-data   Pending                                      local-path     <unset>                 11m
+
+ k apply  -f deployment.yaml
+deployment.apps/mealie configured
+  
+ kgp
+NAME                      READY   STATUS    RESTARTS       AGE
+mealie-79464fdcc9-lx7gd   1/1     Running   0              43s
+nginx-storage             2/2     Running   32 (10m ago)   20d
+
+    main ±  k get pvc
+NAME          STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+mealie-data   Bound    pvc-49145c9f-c5c1-4be5-a4a7-7a9396b91cc6   500Mi      RWO            local-path     <unset>                 13m
+
+   k get persistentvolume
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-49145c9f-c5c1-4be5-a4a7-7a9396b91cc6   500Mi      RWO            Delete           Bound    mealie/mealie-data   local-path     <unset>                          87s
+
+ k get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-49145c9f-c5c1-4be5-a4a7-7a9396b91cc6   500Mi      RWO            Delete           Bound    mealie/mealie-data   local-path     <unset>                          87s
+```
+
+
+```
+ k describe pod mealie
+Name:             mealie-79464fdcc9-lx7gd
+Namespace:        mealie
+Priority:         0
+Service Account:  default
+Node:             lima-rancher-desktop/192.168.5.15
+Start Time:       Thu, 08 Jan 2026 20:37:11 +0100
+Labels:           app=mealie
+                  pod-template-hash=79464fdcc9
+Annotations:      <none>
+Status:           Running
+IP:               10.42.0.193
+IPs:
+  IP:           10.42.0.193
+Controlled By:  ReplicaSet/mealie-79464fdcc9
+Containers:
+  mealie:
+    Container ID:   docker://bcb0261899bc33df40eff6bc2780775e7ca74da8e5edf71cabad502de7cc5fd0
+    Image:          ghcr.io/mealie-recipes/mealie:v3.5.0
+    Image ID:       docker-pullable://ghcr.io/mealie-recipes/mealie@sha256:7f776bbb5457db7f58951c11e3aa881f0167675a78459d7a7f2cd5e42d181fa5
+    Port:           9000/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 08 Jan 2026 20:37:11 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /app/data from mealie-datax (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-2zq52 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True
+  Initialized                 True
+  Ready                       True
+  ContainersReady             True
+  PodScheduled                True
+Volumes:
+  mealie-datax:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  mealie-data
+    ReadOnly:   false
+  kube-api-access-2zq52:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  111s  default-scheduler  Successfully assigned mealie/mealie-79464fdcc9-lx7gd to lima-rancher-desktop
+  Normal  Pulled     112s  kubelet            Container image "ghcr.io/mealie-recipes/mealie:v3.5.0" already present on machine
+  Normal  Created    112s  kubelet            Created container: mealie
+  Normal  Started    112s  kubelet            Started container mealie
+```
+
+
+  
   
 ## K9s
   
