@@ -1,9 +1,9 @@
 # Kubernetes
 
-
 Kubernetes is OS of the cloud.
 
-Kubernetes is a bunch of virtual machines, who are able to communicate propertly with each other and to divide their workload.
+Kubernetes is a bunch of virtual machines, who are able to communicate propertly with each other and to divide their
+workload.
 
 So Kubernetes is an intelligent way of running container workloads at scale.
 
@@ -15,23 +15,23 @@ A pod is not a container.
 
 A pod is a collection of containers + other resources.
 
-
 - single container
 - multi container
 - initcontainer
 
 Pod will contain info about:
-  - networking
-  - storage
-  - ...
-  
-  
-multiples containers are attached to the pod, but the storage is attached to the pod. 
-So the containers can all use the same storage
+
+- networking
+- storage
+- ...
+
+multiples containers are attached to the pod, but the storage is attached to the pod. So the containers can all use the
+same storage
 
 ### YAML
-  
+
 get a little yaml definition
+
 ```
 $ kubectl run nginx-yaml --image=nginx --dry-run=client -o yaml
 
@@ -52,11 +52,13 @@ status: {}
 ```
 
 Save in a file:
+
 ```
 kubectl run nginx-yaml --image=nginx --dry-run=client -o yaml > nginx.yaml
 ```
 
 Create a pod with a yaml file
+
 ```
 $ kubectl apply -f nginx.yaml
 pod/nginx-yaml created
@@ -67,7 +69,7 @@ nginx-sergio   1/1     Running   1 (23h ago)   24h
 nginx-yaml     1/1     Running   0             8s
 $ k describe pod nginx-yaml
 ....
- 
+
 ```
 
 Apply changes
@@ -90,6 +92,7 @@ kubctl config use-context ....
 ```
 
 Create a Pod
+
 ```
 kubectl run nginx-sergio --image=nginx
 ```
@@ -101,7 +104,6 @@ k get pod httpd-sergio -o yaml
 ```
 
 :set paste -> for preserving original format in Vim
-
 
 To see more info
 
@@ -195,8 +197,8 @@ Events:
 
 ```
 
-
 ### How we can get YAML files:
+
 1. copying from Kubernetes docs
 2. run a comand for creating a pod and generate YAML file without running it on the cluster
 
@@ -229,6 +231,7 @@ nginx-yaml     1/1     Running   5 (11m ago)   12d
 ```
 
 ### How to create a deployment
+
 Same for deployments:
 
 ```
@@ -262,6 +265,7 @@ status: {}
 ```
 
 deployment is to define the desired state.
+
 ```
 $ k apply -f deploy.yaml
 deployment.apps/test created
@@ -281,8 +285,9 @@ test-6546ccdcf9-z4q85   1/1     Running   0             5s
 test-6546ccdcf9-znxv5   1/1     Running   0             5s
 test-6546ccdcf9-zws89   1/1     Running   0             5s
 ```
-The deployment is not actually creating the pods.
-The deployment controls the replica set, and a replica set is basically a set of replicas of a certain pod. 
+
+The deployment is not actually creating the pods. The deployment controls the replica set, and a replica set is
+basically a set of replicas of a certain pod.
 
 ```
 $ k describe deployments.apps test
@@ -324,7 +329,6 @@ NAME              DESIRED   CURRENT   READY   AGE
 test-6546ccdcf9   10        10        10      2m25s
 ```
 
-
 ```
 $ k describe replicasets.apps test-6546ccdcf9
 Name:           test-6546ccdcf9
@@ -342,7 +346,7 @@ Pod Template:
   Labels:  app=test
            pod-template-hash=6546ccdcf9
   Containers:
-   httpd: 
+   httpd:
     Image:         httpd
     Port:          <none>
     Host Port:     <none>
@@ -364,15 +368,15 @@ Events:
   Normal  SuccessfulCreate  6m19s  replicaset-controller  Created pod: test-6546ccdcf9-6szwk
   Normal  SuccessfulCreate  6m19s  replicaset-controller  Created pod: test-6546ccdcf9-glwq2
   Normal  SuccessfulCreate  6m19s  replicaset-controller  (combined from similar events): Created pod: test-6546ccdcf9-t856j
-  ```
-Replicas should never really be managed by people by by the user.
-Kubernetes manages replica sets for you.
-This is something that is managed by the deployments.
+```
+
+Replicas should never really be managed by people by by the user. Kubernetes manages replica sets for you. This is
+something that is managed by the deployments.
 
 ### How to update to a new version without losing service
-10 replicas running
-Some of the will be updated, but the rest will still running.
-Once the updated ones are ready, we will do the same to the rest.
+
+10 replicas running Some of the will be updated, but the rest will still running. Once the updated ones are ready, we
+will do the same to the rest.
 
 1. change yaml file
 
@@ -404,10 +408,11 @@ status: {}
 2. Apply the change
 
 ```
-kubectl apply -f deploy.yaml 
+kubectl apply -f deploy.yaml
 ```
 
-to see the trick use 
+to see the trick use
+
 ```
 watch -n 1 "kubectl get pods"
 ```
@@ -485,6 +490,7 @@ status: {}
 ```
 
 Kill all pods at same time and recreate them.
+
 ```
   strategy:
     type: Recreate
@@ -562,14 +568,15 @@ spec: {}
 status: {}
 ```
 
-- Delete a namespace
-it will delete anything associated to the namespace.
+- Delete a namespace it will delete anything associated to the namespace.
+
 ```
 $ k delete namespaces mealie
 namespace "mealie" deleted
 ```
 
 - Create a namespace with the yaml file
+
 ```
 $ k apply -f namespace.yaml
 namespace/mealie created
@@ -626,6 +633,7 @@ mischa-mealie   1/1     Running   0          5m45s
 ### First app
 
 create yaml file
+
 ```
 k create deployment mealie --image=nginx --dry-run=client -o yaml > deployment.yaml
 ```
@@ -655,7 +663,6 @@ spec:
 
 ghcr.io/mealie-recipes/mealie:<version>
 
-
 ```
 apiVersion: apps/v1
 kind: Deployment
@@ -680,23 +687,24 @@ spec:
 ```
 
 Apply
-  
+
 ```
 k apply -f deployment.yaml
 deployment.apps/mealie created
 ```
-  
+
 ```
 $ k describe pod mealie
 ```
 
 Port forwarding
+
 ```
 $ k port-forward pods/mealie-5479dbb894-mk7jw 9000
 Forwarding from 127.0.0.1:9000 -> 9000
 Forwarding from [::1]:9000 -> 9000
 ```
-  
+
 List deployments
 
 ```
@@ -706,7 +714,7 @@ mealie   1/1     1            1           27m
 ```
 
 Update the version
-  
+
 ```
 apiVersion: apps/v1
 kind: Deployment
@@ -735,38 +743,34 @@ And apply again
 
 k apply -f deployment.yaml
 ```
-  
+
 For deleting all pod instances created with a deployment:
-  
+
 ```
 kubectl delete deployment name
 ```
 
 ## Networking
+
 ### Intro
-  
+
 List all pods in all namespaces
 
-kgp -A
-k get pods --all-namespaces -o wide
+kgp -A k get pods --all-namespaces -o wide
 
-Each pod gets its own IP address.
-By default, pods can connect to all pods on all nodes.
-Containers in pods can comminicate with each other through localhost.
+Each pod gets its own IP address. By default, pods can connect to all pods on all nodes. Containers in pods can
+comminicate with each other through localhost.
 
-  
 CNI plugin provides network connectivity to containers.
-  
-  
+
 Implemented by CNI plugins:
-  - Cilium
-  - Calico
-  - Flannel
 
+- Cilium
+- Calico
+- Flannel
 
-  
 rdctl -h -> Rancher desktop ctl
-  
+
 rdctl shell bash -> Rancher desktop vm.
 
 ```
@@ -801,21 +805,19 @@ net.d
   ]
 }
 ```
-  
+
 ### Services
 
 A service offers a consistent address to access a set of pods.
-  
+
 Pods are ephemeral.
-  
+
 A service is a group of pods.
-  
+
 Pods are constantly changing and being moved across nodes.
-  
 
 How will the system keep track of the constantly changing IP addresses? -> service
-  
-  
+
 -> expose generates the service.
 
 ```
@@ -832,65 +834,69 @@ kubernetes   ClusterIP   10.43.0.1      <none>        443/TCP    41d   <none>
 ```
 
 The cluster ip is 10.43.132.58 and will remain the same.
-  
+
 type of services:
-  - cluster IP -> default one
-  - node port: Exposes a port on each node allowing direct access to the service throught any node's IP address.
-  
+
+- cluster IP -> default one
+- node port: Exposes a port on each node allowing direct access to the service throught any node's IP address.
+
 ```
 $ k get nodes -o wide
 NAME                   STATUS   ROLES                  AGE   VERSION        INTERNAL-IP    EXTERNAL-IP    OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
 lima-rancher-desktop   Ready    control-plane,master   47d   v1.33.5+k3s1   192.168.5.15   192.168.64.2   Alpine Linux v3.21   6.6.96-0-virt    docker://27.3.1
 ```
 
-192.168.64.2  is the external IP.
-  
-If I have a node port service, I can exposte a port on that node directly. Then I could reach that port from by entering that IP address and the port.
-  
+192.168.64.2 is the external IP.
+
+If I have a node port service, I can exposte a port on that node directly. Then I could reach that port from by entering
+that IP address and the port.
+
 Not very common.
-  
-  - Load balancer: For cloud providers.
-  
+
+- Load balancer: For cloud providers.
+
 ```
 k get svc
 NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
 frontend     ClusterIP   10.43.132.58   <none>        8080/TCP   6d
 kubernetes   ClusterIP   10.43.0.1      <none>        443/TCP    47d
-  
-  
+
+
 k edit svc frontend
 ...
   type: ClusterIP
 ...
 
-  
+
 ...
   type: LoadBalancer
 ...
-  
-  
+
+
 $ k get svc
 NAME         TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)          AGE
 frontend     LoadBalancer   10.43.132.58   192.168.64.2   8080:30922/TCP   6d
 kubernetes   ClusterIP      10.43.0.1      <none>         443/TCP          47d
-```  
+```
+
 This is a way how to reach your your services, your applications from outside of your Kubernetes cluster.
-  
 
 #### Mealie
+
 doing a port forward of the pod itself.
 
 change to mealie context
+
 ```
 $ k config set-context --current --namespace=mealie
-  
+
 $ kgp
 NAME                      READY   STATUS    RESTARTS       AGE
 mealie-5d545757cf-275qj   1/1     Running   7 (138m ago)   12d
 ```
 
 Expose mealie deployment
-  
+
 ```
 k expose deployment mealie --port 9000
 service/mealie exposed
@@ -900,18 +906,20 @@ mealie   ClusterIP   10.43.153.184   <none>        9000/TCP   85s
 ```
 
 Port forward to a service
+
 ```
 k port-forward services/mealie 9000
 Forwarding from 127.0.0.1:9000 -> 9000
 Forwarding from [::1]:9000 -> 9000
 ```
 
-The deployment is exposed through a service instead of doing the pod directly, because if we expose the pod and we kill that pod, the port for remote works.
-But if we close terminal, we will not able to access to it.
-  
+The deployment is exposed through a service instead of doing the pod directly, because if we expose the pod and we kill
+that pod, the port for remote works. But if we close terminal, we will not able to access to it.
+
 We need a load balancer.
 
 get the yaml of the service
+
 ```
 k get svc mealie -o yaml > service.yaml
 ```
@@ -950,6 +958,7 @@ status:
 ```
 
 Simplified to
+
 ```
 apiVersion: v1
 kind: Service
@@ -968,9 +977,11 @@ spec:
     app: mealie
   type: ClusterIP
 ```
+
 type changd to LoadBalancer
-  
+
 Kill the existing service
+
 ```
 $ k get svc
 NAME     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
@@ -980,7 +991,7 @@ service "mealie" deleted from mealie namespace
 ```
 
 Apply new one:
-  
+
 ```
 $ k apply -f service.yaml
 service/mealie created
@@ -990,42 +1001,42 @@ mealie   LoadBalancer   10.43.174.220   192.168.64.2   9000:32530/TCP   5s
 ```
 
 ### Ingress
-  
-It is a resource on the cluster, and it exposes http and https routes from outside the cluster to services within the cluster.
 
-So the cluster is listening to a certain domain, and it has a root configured to root that domain to a service in the cluster.
+It is a resource on the cluster, and it exposes http and https routes from outside the cluster to services within the
+cluster.
 
-The cluster is listeing to a certain domain, and it has a route configured to route that domain to a service in the cluster.
-  
+So the cluster is listening to a certain domain, and it has a root configured to root that domain to a service in the
+cluster.
+
+The cluster is listeing to a certain domain, and it has a route configured to route that domain to a service in the
+cluster.
+
 For an app running we would need a FQDN (fully qualified domain name).
 
 Provides:
-  - SSL and TLS termination.
-  - external urls
-  - path based routing: you will the route.
-  
+
+- SSL and TLS termination.
+- external urls
+- path based routing: you will the route.
+
 Ingress controller types:
-  - nginx
-  - traefik
-  - cilium
-  - cloud: AGIC
-  
-  
-Possible:
-  domain in cloudfare pointing to IP
-  that IP address is pointing to a kubernetes load balancer created by traffic or nginx
-  the traffic is the ingres controller that running on my cluster
-  the cluster is going to look at the ingress resources configured, and it is going to look at the ingress
-  The ingress has a routing rule to ta service.
 
-  
+- nginx
+- traefik
+- cilium
+- cloud: AGIC
+
+Possible: domain in cloudfare pointing to IP that IP address is pointing to a kubernetes load balancer created by
+traffic or nginx the traffic is the ingres controller that running on my cluster the cluster is going to look at the
+ingress resources configured, and it is going to look at the ingress The ingress has a routing rule to ta service.
+
 ## Storage
-### Ephemeral Storage
-So in order for a container to save data somewhere, it needs to have a volume.
-It needs to have, in other terms a disk mounted to it.
-So a volume is just a piece of the file system where the container is hosted.
 
-  
+### Ephemeral Storage
+
+So in order for a container to save data somewhere, it needs to have a volume. It needs to have, in other terms a disk
+mounted to it. So a volume is just a piece of the file system where the container is hosted.
+
 ```
 k describe pod mealie-5d545757cf-275qj | less
 
@@ -1036,10 +1047,9 @@ Volumes:
     ConfigMapName:           kube-root-ca.crt
     Optional:                false
     DownwardAPI:             true
-  
+
 ```
-  
-  
+
 ```
 
 apiVersion: v1
@@ -1059,11 +1069,11 @@ spec:
       emptyDir:       ---> it will be deleted when pod is deleted
         sizeLimit: 500Mi
 
-  
+
 k apply -f nginx-pod.yaml
-pod/nginx-storage created  
-  
-  
+pod/nginx-storage created
+
+
 k describe pod nginx-pod
 ...
 Volumes:
@@ -1072,16 +1082,16 @@ Volumes:
     Medium:
     SizeLimit:  500Mi
   kube-api-access-m895p:
-  
 
-  
+
+
 k exec -it nginx-storage -- bash
 
 root@nginx-storage:/# ls
 bin  boot  dev	docker-entrypoint.d  docker-entrypoint.sh  etc	home  lib  media  mnt  opt  proc  root	run  sbin  scratch  srv  sys  tmp  usr	va
-  
+
 ```
-  
+
 ```
 apiVersion: v1
 kind: Pod
@@ -1106,15 +1116,13 @@ spec:
     - name: scratch-volume
       emptyDir:
         sizeLimit: 500Mi
-  
+
 ```
-  
+
 **To a running pod, we cannot add a container.**
-  
-First we need to delete it:
-k delete pod nginx-storage
-pod "nginx-storage" deleted from mealie namespace
-  
+
+First we need to delete it: k delete pod nginx-storage pod "nginx-storage" deleted from mealie namespace
+
 ```
 k apply -f nginx-pod.yaml
 
@@ -1124,6 +1132,7 @@ mealie-5d545757cf-275qj   1/1     Running   16 (73m ago)   28d
 nginx-storage             2/2     Running   0              13m
 
 ```
+
 1 volumen, 2 containers
 
 ```
@@ -1132,20 +1141,20 @@ root@nginx-storage:/# cd /scratch/
 root@nginx-storage:/scratch# ls
 root@nginx-storage:/scratch# echo hello > hello.txt
 root@nginx-storage:/scratch# cat hello.txt
-  
+
  k exec -it nginx-storage -c busybox -- sh
 / # ls /scratch/
 hello.txt
 / # cat /scratch/hello.txt
 hello
-  
+
 watch -n 1 "ls -la" -> every second run ls -la
 ```
-  
+
 ### Persistent Storage
 
-persistent volume are like a huge disck that is living in the cluster where is a huge disk. Every app living in cluster is using a part of this.
-that is a persistent volumen claim.
+persistent volume are like a huge disck that is living in the cluster where is a huge disk. Every app living in cluster
+is using a part of this. that is a persistent volumen claim.
 
 ```
 apiVersion: v1
@@ -1168,14 +1177,14 @@ $ k apply -f storage.yaml
 persistentvolumeclaim/mealie-data created
 $ k get persistentvolume
 No resources found
-  
+
 $ k get persistentvolumeclaims
 NAME          STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
 mealie-data   Pending                                      local-path     <unset>                 59s
 ```
 
 The following code is added in pod yaml:
-  
+
 ```
         volumenMounts:
           - mountPath: /app/data
@@ -1187,6 +1196,7 @@ The following code is added in pod yaml:
 ```
 
 Then apply:
+
 ```
  k get pvc
 NAME          STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
@@ -1194,7 +1204,7 @@ mealie-data   Pending                                      local-path     <unset
 
  k apply  -f deployment.yaml
 deployment.apps/mealie configured
-  
+
  kgp
 NAME                      READY   STATUS    RESTARTS       AGE
 mealie-79464fdcc9-lx7gd   1/1     Running   0              43s
@@ -1212,7 +1222,6 @@ pvc-49145c9f-c5c1-4be5-a4a7-7a9396b91cc6   500Mi      RWO            Delete     
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
 pvc-49145c9f-c5c1-4be5-a4a7-7a9396b91cc6   500Mi      RWO            Delete           Bound    mealie/mealie-data   local-path     <unset>                          87s
 ```
-
 
 ```
  k describe pod mealie
@@ -1276,12 +1285,53 @@ Events:
   Normal  Started    112s  kubelet            Started container mealie
 ```
 
-
-  
-  
 ## K9s
-  
+
+pick the context active
+
+shift-a -> order by age shift-s -> order by status
+
+I want to restart ctrl-k
+
+for checking logs, quicker than:
+
+```
+k -n mealie logs pods/mealie-7974c7958f-8pplp | less
+```
+
 ## Helm
+
+brew install helm
+
+```
+helm repo add homarr-labs https://homarr-labs.github.io/charts/
+helm repo update
+helm install homarr homarr-labs/homarr   -> install in active namespace
+```
+
+instead I use:
+
+```
+helm install homarr homarr-labs/homarr --namespace homarr --create-namespace
+```
+
+there is an error in pod and I want to delete it without recreation
+```  
+kubectl scale deployment homarr --replicas=0 -n homarr
+```
+  
+for restart it:
+  
+```
+kubectl scale deployment homarr --replicas=1 -n homarr
+```
+
+uninstall
+  
+```
+helm uninstall -n homarr homarr
+```
   
 ## Monitoring
-  
+
+
