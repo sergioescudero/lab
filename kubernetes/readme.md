@@ -1299,6 +1299,12 @@ for checking logs, quicker than:
 k -n mealie logs pods/mealie-7974c7958f-8pplp | less
 ```
 
+K9s: to see namespaces list:
+```
+click :ns
+then select the namespace and enter
+```
+
 ## Helm
 
 brew install helm
@@ -1334,4 +1340,194 @@ helm uninstall -n homarr homarr
   
 ## Monitoring
 
+https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/README.md
 
+  
+Before
+```
+~ helm ls -A
+NAME       	NAMESPACE  	REVISION	UPDATED                                	STATUS  	CHART                      	APP VERSION
+homarr     	homarr     	1       	2026-01-13 20:46:27.205937 +0100 CET   	deployed	homarr-8.9.0               	v1.50.0
+traefik    	kube-system	1       	2025-10-16 17:23:07.152971045 +0000 UTC	deployed	traefik-34.2.1+up34.2.0    	v3.3.2
+traefik-crd	kube-system	1       	2025-10-16 17:22:52.388067413 +0000 UTC	deployed	traefik-crd-34.2.1+up34.2.0	v3.3.2
+```
+
+```
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+  
+helm install prometheus-stack prometheus-community/kube-prometheus-stack --namespace=monitoring --create-namespace
+  
+```
+  
+prometheus-stack -> is the name of the release we are going to give it in our cluster
+prometheus-community/kube-prometheus-stack -> name of repo which I am pointing at, which is saved on my local
+  
+
+```
+~ helm ls -A
+NAME            	NAMESPACE  	REVISION	UPDATED                                	STATUS  	CHART                        	APP VERSION
+homarr          	homarr     	1       	2026-01-13 20:46:27.205937 +0100 CET   	deployed	homarr-8.9.0                 	v1.50.0
+prometheus-stack	monitoring 	1       	2026-01-15 20:28:45.31638 +0100 CET    	deployed	kube-prometheus-stack-80.14.4	v0.87.1
+traefik         	kube-system	1       	2025-10-16 17:23:07.152971045 +0000 UTC	deployed	traefik-34.2.1+up34.2.0      	v3.3.2
+traefik-crd     	kube-system	1       	2025-10-16 17:22:52.388067413 +0000 UTC	deployed	traefik-crd-34.2.1+up34.2.0  	v3.3.2
+```
+
+```
+ ~ kgp -n monitoring
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-prometheus-stack-kube-prom-alertmanager-0   2/2     Running   0          27m
+prometheus-prometheus-stack-kube-prom-prometheus-0       2/2     Running   0          27m
+prometheus-stack-grafana-5595969d57-tdlzk                3/3     Running   0          27m
+prometheus-stack-kube-prom-operator-79d778fc78-dl9ql     1/1     Running   0          27m
+prometheus-stack-kube-state-metrics-7d6b659ff-q8zk5      1/1     Running   0          27m
+prometheus-stack-prometheus-node-exporter-64jph          1/1     Running   0          27m
+```
+
+prometheus-stack-prometheus-node-exporter collects metrics.
+
+:svc -> services
+  
+Select Grafana 
+  
+shift-f -> port forward -> a F is added in PF column.
+  
+go to -> localhost:3000
+
+  
+to see credentials
+```
+helm show values prometheus-community/kube-prometheus-stack > prometheus-default-values.yaml
+
+large file generated.
+
+```
+  
+Grafana only use pwd secret in the first boot.
+
+how to fix it:
+
+1. overwrite pwd
+  
+```
+helm upgrade prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring \
+  --set grafana.adminPassword=Admin123!
+```
+
+2. restart Grafana
+
+```
+kubectl rollout restart deployment -n monitoring prometheus-stack-grafana
+```
+
+user: admin
+pwd: Admin123!
+  
+
+best practices
+  
+1. use an own Secret
+
+```
+grafana:
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+```
+
+2. create secret
+
+```
+kubectl create secret generic grafana-admin \
+  -n monitoring \
+  --from-literal=admin-user=admin \
+  --from-literal=admin-password=ASafePWD
+
+```
+  
+3. Apply changes
+
+```
+helm upgrade prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring \
+  -f prometheus-default-values.yaml
+
+```
+  
+  
+Another way
+  
+- create yaml, values.yaml
+  
+```
+grafana:
+  adminPassword: hello-world
+```
+
+run
+```
+helm upgrade prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring --values values.yaml
+```
+  
+### Assign an IP address to our home
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: grafana
+  name: grafana-loadbalancer
+  namespace: monitoring
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app.kubernetes.io/instance: prometheus-stack
+    app.kubernetes.io/name: grafana
+  type: LoadBalancer
+```
+
+selector copied from svc grafana
+  
+then apply:
+
+```
+k apply -f loadbalancer.yml
+```
+  
+![load balancer added](monitoring/k9s_loadbalancer.png)
+  
+
+## Outro
+  
+CKAD -> application developer 
+CKA -> administrator
+
+what to do:
+- Find other self-hosted applicaitons which usually have Docker Compose files
+- Convert this setup to Kubernetes manifests
+- Maybe try some helm charts
+
+Examples:
+- Linkding -> https://linkding.link
+- Homepage -> https://gethomepage.dev
+- techno-tim/littlelink-server
+
+
+From docker to k8s:
+  - deployment
+  - service
+  - storage
+  
+
+Check Ingress.
+  - ingressClass: traefik
+  - expose mealie
+  
+
+  
